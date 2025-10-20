@@ -100,5 +100,12 @@ notepad README.md   # or code README.md
 # then commit & push
 git add README.md
 git commit -m "docs: add polished README"
+## License
+
+This project is released under the **MIT License**.
+
+In short: you are free to use, copy, modify, and distribute this software — including for commercial purposes — as long as you include the original copyright
+notice and license text. The software is provided *as is*; the authors are not liable for any damages.
+
 git push
 If git push asks for credentials, use Git Credential Manager sign-in or your GitHub username and a Personal Access Token (PAT) as the password.
