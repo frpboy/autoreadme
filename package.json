@@ -1,0 +1,35 @@
+{
+  "name": "autoreadme",
+  "version": "0.1.0",
+  "description": "Auto-generate README.md from your project structure",
+  "type": "module",
+  "bin": {
+    "autoreadme": "./dist/index.mjs"
+  },
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsup src/index.ts --format esm --out-dir dist --dts --minify --sourcemap",
+    "start": "node dist/index.mjs",
+    "test:local": "node dist/index.mjs generate"
+  },
+  "keywords": [
+    "readme",
+    "generator",
+    "cli",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "fs-extra": "^11.2.0",
+    "globby": "^14.0.1",
+    "handlebars": "^4.7.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.1.0",
+    "typescript": "^5.6.3"
+  }
+}
