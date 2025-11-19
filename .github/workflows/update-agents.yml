@@ -1,0 +1,57 @@
+name: Update AGENTS.md
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'AGENTS.md'
+      - '.github/workflows/update-agents.yml'
+
+jobs:
+  update-changelog:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for commit analysis
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          
+      - name: Make script executable
+        run: chmod +x .github/scripts/update-agents.mjs
+        
+      - name: Update AGENTS.md
+        id: update
+        run: |
+          if node .github/scripts/update-agents.mjs ${{ github.sha }}; then
+            echo "updated=true" >> $GITHUB_OUTPUT
+          else
+            echo "updated=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+        
+      - name: Commit changes
+        if: steps.update.outputs.updated == 'true'
+        run: |
+          git config user.name "AutoReadMe Bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add AGENTS.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update AGENTS.md changelog
+
+Automated update from workflow.
+
+Co-authored-by: frpboy12 <frpboy12@gmail.com>
+Generated with [Continue](https://continue.dev)
+
+Co-Authored-By: Continue <noreply@continue.dev>"
+            git push
+          fi
