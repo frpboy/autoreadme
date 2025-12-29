@@ -4,6 +4,10 @@
 
 {{badges.build}} {{badges.license}}
 
+{{#if repository}}
+[Repository]({{{repository}}})
+{{/if}}
+
 ## 🚀 Installation
 ```bash
 npm install
@@ -11,16 +15,21 @@ npm install
 
 ## 🧩 Usage
 ```bash
-{{usageExample}}
+{{{usageExample}}}
 ```
 
-## 🧰 Tech Stack
-{{#if dependencies}}
+{{#if scripts}}
+## 📜 Available Scripts
+{{#each scripts}}
+- `npm run {{this}}`
+{{/each}}
+{{/if}}
+
+{{#if dependencies.length}}
+## 🧰 Dependencies
 {{#each dependencies}}
 - {{this}}
 {{/each}}
-{{else}}
-- (no runtime dependencies)
 {{/if}}
 
 ## 📄 License

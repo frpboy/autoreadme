@@ -1,0 +1,17 @@
+{
+  "name": "example-node-project",
+  "version": "1.0.0",
+  "description": "An example Node.js project for testing AutoReadMe",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Running tests...\""
+  },
+  "keywords": ["example", "test"],
+  "author": "Test Author",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.0",
+    "axios": "^1.6.0"
+  }
+}
