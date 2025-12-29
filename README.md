@@ -35,7 +35,7 @@ npm install -g autoreadme
 ### Local Development
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/autoreadme.git
+git clone https://github.com/frpboy/autoreadme.git
 cd autoreadme
 npm install
 npm run build
