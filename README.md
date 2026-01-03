@@ -1,39 +1,47 @@
 # AutoReadMe
 
-Auto-generate professional README.md files from your project structure with zero configuration.
+**Transform messy repositories into maintainable documentation, automatically.**
 
-![build](https://img.shields.io/badge/build-passing-brightgreen) ![license](https://img.shields.io/badge/license-MIT-blue)
+AutoReadMe is a lightweight CLI tool that generates professional-grade README files from project analysis. Zero configuration. Intelligent defaults. Built for teams and CI/CD pipelines.
 
-## Overview
+[![build passing](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/frpboy/autoreadme)
+[![license MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/frpboy/autoreadme/blob/main/LICENSE)
 
-AutoReadMe is a lightweight CLI tool that automatically generates clear, well-structured README files by analyzing your project. It detects your project type, dependencies, scripts, and repository information to create documentation that stays up-to-date without manual editing.
+## Problem Statement
 
-Perfect for:
-- Quickly bootstrapping documentation for new projects
-- Maintaining consistent README structure across projects
-- Automating documentation in CI/CD pipelines
-- Teams that want standardized project documentation
+README files are often an afterthought:
+- Outdated as projects evolve
+- Inconsistently structured across teams  
+- Time-consuming to maintain manually
+- Frequently missing critical sections (setup, architecture, troubleshooting)
 
-## Features
+AutoReadMe solves this by **analyzing your codebase and generating documentation that reflects reality**.
 
-- **Zero Configuration**: Works out of the box with sensible defaults
-- **Smart Detection**: Automatically identifies Node.js, Python, or generic projects
-- **Git Integration**: Detects and includes repository information from `.git/config`
-- **Customizable Templates**: Easy-to-modify Handlebars templates for different project types
-- **CI/CD Ready**: Includes GitHub Action for automatic README updates
-- **Script Discovery**: Automatically lists available npm scripts for Node projects
-- **Error Handling**: Comprehensive error handling with helpful messages
+## How It Works
+
+1. **Scans** your project structure, dependencies, and scripts
+2. **Detects** project type (Node.js, Python, or generic)
+3. **Generates** a structured, polished README with zero manual effort
+4. **Integrates** seamlessly into CI/CD pipelines
+
+## Key Features
+
+- **Zero Configuration**: Works immediately with sensible defaults
+- **Smart Detection**: Identifies Node.js, Python, or generic projects automatically
+- **Git Integration**: Pulls repository URL and metadata from `.git/config`
+- **Customizable Templates**: Handlebars-based templates for full flexibility
+- **CI/CD Ready**: Includes GitHub Action for automatic README updates on every push
+- **Script Discovery**: Auto-lists available npm/Python scripts for quick reference
+- **Comprehensive Error Handling**: Helpful messages when something goes wrong
 
 ## Installation
 
-### Global Installation
-
+### Global (recommended)
 ```bash
 npm install -g autoreadme
 ```
 
 ### Local Development
-
 ```bash
 git clone https://github.com/frpboy/autoreadme.git
 cd autoreadme
@@ -43,73 +51,68 @@ npm run build
 
 ## Usage
 
-### Basic Usage
-
-Generate a README in the current directory:
-
+### Quick Start
 ```bash
 autoreadme generate
 ```
 
-Or if running locally:
+This creates/overwrites `README.md` in the current directory.
 
+### With Options
 ```bash
-node dist/index.js generate
-```
-
-### Options
-
-```bash
-autoreadme generate [options]
-
-Options:
-  -t, --template <name>   Specify template (node|python|default)
-  -o, --out <path>        Output path (default: README.md)
-  -h, --help              Display help
-```
-
-### Examples
-
-```bash
-autoreadme generate
-
+# Specify template type
 autoreadme generate --template node
 
+# Custom output path
 autoreadme generate --out docs/README.md
+
+# Display help
+autoreadme generate --help
 ```
 
-## Project Detection
+### Project Type Detection
 
-AutoReadMe automatically detects your project type:
+AutoReadMe intelligently detects your project:
 
-| Project Type | Detection Method | Template Used |
-|--------------|------------------|---------------|
-| Node.js | `package.json` exists | `node.hbs` |
-| Python | `requirements.txt` exists | `python.hbs` |
-| Generic | No specific files detected | `default.hbs` |
+| Detection | Template | File Markers |
+|-----------|----------|---------------|
+| **Node.js** | `node.hbs` | `package.json` present |
+| **Python** | `python.hbs` | `requirements.txt` present |
+| **Generic** | `default.hbs` | No recognized markers |
 
-## Templates
+## Architecture
 
-Templates are located in `src/templates/` and use Handlebars syntax.
+### Core Components
 
-### Available Data
+```
+src/
+├── index.ts        # CLI entry point and command routing
+├── scanner.ts      # Project type detection and metadata extraction
+├── generator.ts    # README generation logic
+└── templates/      # Handlebars templates
+    ├── node.hbs
+    ├── python.hbs
+    └── default.hbs
+```
 
-Templates have access to:
+### Template System
+
+Templates use **Handlebars syntax** and have access to:
 
 ```typescript
 {
-  projectName: string;
-  description?: string;
-  license?: string;
-  type: 'node'|'python'|'default';
-  usageExample?: string;
-  dependencies?: string[];
-  author?: string;
-  repository?: string;
-  scripts?: string[];
-  badges: {
-    build: string;
-    license: string;
+  projectName: string              // Inferred from package.json or directory
+  description?: string             // From package.json or manual input
+  license?: string                 // License type
+  type: 'node' | 'python' | 'default'
+  usageExample?: string            // CLI command examples
+  dependencies?: string[]          // Package dependencies
+  author?: string                  // Author information
+  repository?: string              // Git repository URL
+  scripts?: string[]               // Available npm/Python scripts
+  badges: {                        // Pre-formatted status badges
+    build: string
+    license: string
   }
 }
 ```
@@ -117,83 +120,92 @@ Templates have access to:
 ### Creating Custom Templates
 
 1. Create a new `.hbs` file in `src/templates/`
-2. Use triple braces `{{{variable}}}` for code content
-3. Use double braces `{{variable}}` for text content
-4. Test with example projects
+2. Use `{{variable}}` for text, `{{{variable}}}` for HTML/code
+3. Test with example projects in `test/`
 
 Example:
-
 ```handlebars
 # {{projectName}}
 
 {{description}}
 
 ## Installation
-```bash
+\`\`\`bash
 {{{usageExample}}}
+\`\`\`
 ```
 
-## License
-{{license}}
-```
+## GitHub Actions Integration
 
-## GitHub Action
+Automatically regenerate your README on every push:
 
-Automatically update your README on every push:
-
-1. Copy `.github/workflows/autoreadme.yml` to your project
-2. Commit and push
-3. The action will run and update README.md automatically
+1. **Copy** `.github/workflows/autoreadme.yml` to your repository
+2. **Commit and push** the workflow file
+3. **GitHub Actions** will run automatically on main branch pushes
 
 The workflow:
-- Runs on push to main branch
 - Installs dependencies
-- Builds the project
-- Generates README
-- Commits changes if any
+- Builds the project  
+- Generates a fresh README
+- Commits changes if any (automatic version bump friendly)
 
 ## Development
 
-### Project Structure
-
-```
-autoreadme/
-├── src/
-│   ├── index.ts           # CLI entry point
-│   ├── generator.ts       # README generation logic
-│   ├── scanner.ts         # Project detection
-│   └── templates/         # Handlebars templates
-├── test/                  # Example projects for testing
-├── dist/                  # Compiled output
-└── package.json           # Package configuration
-```
-
-### Building
-
+### Build
 ```bash
 npm run build
 ```
 
-### Testing
+Compiles TypeScript to `dist/` using tsup.
 
+### Test Locally
 ```bash
 npm run test:local
-
 cd test/example-node
 node ../../dist/index.js generate
 ```
 
 ### Available Scripts
 
-- `npm run dev` - Run in development mode with ts-node
-- `npm run build` - Build the project with tsup
-- `npm run start` - Run the built CLI
-- `npm run test:local` - Test README generation
-- `npm run test` - Generate README and build
+- `npm run dev` - Run in watch mode with ts-node
+- `npm run build` - Build using tsup
+- `npm run start` - Run the compiled CLI
+- `npm run test:local` - Test against example projects
+- `npm run test` - Build and generate test README
+
+## FAQ
+
+**Can I customize the generated README?**
+Yes. Either modify templates in `src/templates/` or use custom templates with the `--template` flag.
+
+**Does it overwrite my existing README?**
+Yes, by default. Use `--out` to save to a different file.
+
+**How do I add support for a new language/framework?**
+Create a new `.hbs` template and add detection logic in `scanner.ts`. See CONTRIBUTING.md for details.
+
+**Can I use this in CI/CD without GitHub Actions?**
+Absolutely. The CLI works in any environment—just run `autoreadme generate` in your pipeline.
+
+## Design Principles
+
+- **Speed over perfection**: Generate useful docs in seconds, refine manually if needed
+- **Zero friction**: No config files, no setup wizards
+- **Extensibility**: Easy to add new templates and detection methods
+- **Maintainability**: Clear separation of concerns (scanning, generation, templates)
+
+## Roadmap
+
+- [ ] Support for Rust, Go, Java, and other languages
+- [ ] AI-powered content enhancement (optional)
+- [ ] Interactive customization mode
+- [ ] Badge configuration (build status, coverage, etc.)
+- [ ] Plugin system for extensibility
+- [ ] Multi-language README generation
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 Quick start:
 1. Fork the repository
@@ -202,43 +214,21 @@ Quick start:
 4. Test thoroughly
 5. Submit a pull request
 
-## Roadmap
-
-- [ ] Support for more project types (Rust, Go, Java, etc.)
-- [ ] AI-powered README enhancement
-- [ ] Custom badge configuration
-- [ ] Interactive mode for README customization
-- [ ] Plugin system for extensibility
-- [ ] Multi-language support
-
-## FAQ
-
-**Q: Can I customize the generated README?**
-A: Yes! Modify the templates in `src/templates/` or create your own.
-
-**Q: Does it overwrite my existing README?**
-A: Yes, by default it overwrites `README.md`. Use `--out` to specify a different file.
-
-**Q: How do I add support for my project type?**
-A: Create a new template and add detection logic in `src/scanner.ts`. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-**Q: Can I use this in CI/CD?**
-A: Absolutely! See the included GitHub Action or integrate into your existing pipeline.
-
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - See [LICENSE](./LICENSE) for details.
 
-## Support
+## Support & Feedback
 
-- Open an issue for bug reports or feature requests
-- Check existing issues before creating new ones
-- Provide example projects when reporting bugs
+- **Bug reports**: [Open an issue](https://github.com/frpboy/autoreadme/issues)
+- **Feature requests**: [Discussions](https://github.com/frpboy/autoreadme/discussions)
+- **Security concerns**: Please email directly (see LICENSE for contact)
 
-## Acknowledgments
+Check existing issues before creating new ones to avoid duplicates.
 
-Built with:
-- [Commander.js](https://github.com/tj/commander.js/) - CLI framework
-- [Handlebars](https://handlebarsjs.com/) - Template engine
+## Built With
+
+- [Commander.js](https://github.com/tj/commander.js/) - Powerful CLI framework
+- [Handlebars](https://handlebarsjs.com/) - Logic-less templates
 - [fs-extra](https://github.com/jprichardson/node-fs-extra) - File system utilities
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [TypeScript](https://www.typescriptlang.org/) - Type-safe JavaScript
