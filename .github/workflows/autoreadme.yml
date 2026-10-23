@@ -2,6 +2,8 @@ name: AutoReadMe
 on:
   push:
     branches: [main]
+permissions:
+  contents: read
 jobs:
   generate:
     permissions:
@@ -9,15 +11,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with:
+          node-version: 20
       - run: npm ci
       - run: npm run build
       - run: node dist/index.mjs generate
-      - name: Commit README
+      - name: Commit README when changed
         run: |
           git config user.name "AutoReadMe Bot"
           git config user.email "bot@users.noreply.github.com"
           git add README.md
-          git commit -m "chore: auto-update README" || echo "No changes"
+          if git diff --cached --quiet; then
+            echo "No README changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: auto-update README"
           git push
