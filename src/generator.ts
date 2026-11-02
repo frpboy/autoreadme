@@ -12,16 +12,24 @@ async function loadTemplate(templateName: string): Promise<string> {
     const templatesDir = path.join(__dirname, '..', 'src', 'templates');
     const templatePath = path.join(templatesDir, `${templateName}.hbs`);
 
-    if (await fs.pathExists(templatePath)) {
-      return fs.readFile(templatePath, 'utf-8');
+    // Performance optimization: Read requested template directly without pathExists check,
+    // falling back to default.hbs if not found.
+    try {
+      return await fs.readFile(templatePath, 'utf-8');
+    } catch (err: any) {
+      if (err?.code === 'ENOENT') {
+        const defaultPath = path.join(templatesDir, 'default.hbs');
+        try {
+          return await fs.readFile(defaultPath, 'utf-8');
+        } catch (defaultErr: any) {
+          if (defaultErr?.code === 'ENOENT') {
+            throw new Error(`Template not found: ${templateName}`);
+          }
+          throw defaultErr;
+        }
+      }
+      throw err;
     }
-
-    const defaultPath = path.join(templatesDir, 'default.hbs');
-    if (await fs.pathExists(defaultPath)) {
-      return fs.readFile(defaultPath, 'utf-8');
-    }
-
-    throw new Error(`Template not found: ${templateName}`);
   } catch (error) {
     throw new Error(`Failed to load template: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }

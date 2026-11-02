@@ -16,31 +16,39 @@ export type ProjectInfo = {
 async function detectGitRepo(root: string): Promise<string | undefined> {
   try {
     const gitConfigPath = path.join(root, '.git', 'config');
-    if (await fs.pathExists(gitConfigPath)) {
-      const config = await fs.readFile(gitConfigPath, 'utf-8');
-      const match = config.match(/url\s*=\s*(.+)/);
-      if (match) {
-        let url = match[1].trim();
-        if (url.startsWith('git@github.com:')) {
-          url = url.replace('git@github.com:', 'https://github.com/');
-        }
-        url = url.replace(/\.git$/, '');
-        return url;
+    // Read directly to avoid redundant stat call via pathExists
+    const config = await fs.readFile(gitConfigPath, 'utf-8');
+    const match = config.match(/url\s*=\s*(.+)/);
+    if (match) {
+      let url = match[1].trim();
+      if (url.startsWith('git@github.com:')) {
+        url = url.replace('git@github.com:', 'https://github.com/');
       }
+      url = url.replace(/\.git$/, '');
+      return url;
     }
-  } catch (error) {
-    console.warn('Could not detect git repository');
+  } catch (error: any) {
+    if (error?.code !== 'ENOENT') {
+      console.warn('Could not detect git repository');
+    }
   }
   return undefined;
 }
 
 export async function scanProject(root: string): Promise<ProjectInfo> {
   try {
-    const repository = await detectGitRepo(root);
-
+    // Performance optimization: Read git repo and package.json concurrently,
+    // avoiding redundant pathExists checks before reading.
     const pkgPath = path.join(root, 'package.json');
-    if (await fs.pathExists(pkgPath)) {
-      const pkg = await fs.readJSON(pkgPath);
+    const [repository, pkg] = await Promise.all([
+      detectGitRepo(root),
+      fs.readJSON(pkgPath).catch((err: any) => {
+        if (err?.code !== 'ENOENT') throw err;
+        return null;
+      })
+    ]);
+
+    if (pkg) {
       const scripts = pkg.scripts ? Object.keys(pkg.scripts) : [];
       const usageScript = pkg.scripts?.dev ? 'dev' : pkg.scripts?.start ? 'start' : scripts[0];
 
@@ -58,8 +66,14 @@ export async function scanProject(root: string): Promise<ProjectInfo> {
     }
 
     const reqPath = path.join(root, 'requirements.txt');
-    if (await fs.pathExists(reqPath)) {
-      const req = await fs.readFile(reqPath, 'utf-8');
+    let req: string | undefined;
+    try {
+      req = await fs.readFile(reqPath, 'utf-8');
+    } catch (err: any) {
+      if (err?.code !== 'ENOENT') throw err;
+    }
+
+    if (req !== undefined) {
       const deps = req.split('\n').map(s => s.trim()).filter(Boolean);
       return {
         projectName: path.basename(root),
