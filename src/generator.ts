@@ -9,8 +9,18 @@ const __dirname = path.dirname(__filename);
 
 async function loadTemplate(templateName: string): Promise<string> {
   try {
-    const templatesDir = path.join(__dirname, '..', 'src', 'templates');
-    const templatePath = path.join(templatesDir, `${templateName}.hbs`);
+    // Security: Validate templateName to prevent path traversal attacks
+    if (!/^[a-zA-Z0-9_-]+$/.test(templateName)) {
+      throw new Error(`Invalid template name: ${templateName}`);
+    }
+
+    const templatesDir = path.resolve(__dirname, '..', 'src', 'templates');
+    const templatePath = path.resolve(templatesDir, `${templateName}.hbs`);
+
+    const relative = path.relative(templatesDir, templatePath);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      throw new Error(`Invalid template path traversal: ${templateName}`);
+    }
 
     if (await fs.pathExists(templatePath)) {
       return fs.readFile(templatePath, 'utf-8');
