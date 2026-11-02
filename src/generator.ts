@@ -9,8 +9,17 @@ const __dirname = path.dirname(__filename);
 
 async function loadTemplate(templateName: string): Promise<string> {
   try {
-    const templatesDir = path.join(__dirname, '..', 'src', 'templates');
-    const templatePath = path.join(templatesDir, `${templateName}.hbs`);
+    // Security: Validate templateName against path traversal / arbitrary file read
+    if (!/^[a-zA-Z0-9_-]+$/.test(templateName)) {
+      throw new Error(`Invalid template name: "${templateName}"`);
+    }
+
+    const templatesDir = path.resolve(__dirname, '..', 'src', 'templates');
+    const templatePath = path.resolve(templatesDir, `${templateName}.hbs`);
+
+    if (!templatePath.startsWith(templatesDir)) {
+      throw new Error(`Access denied: template path traversal detected`);
+    }
 
     if (await fs.pathExists(templatePath)) {
       return fs.readFile(templatePath, 'utf-8');
@@ -42,7 +51,14 @@ export async function generateReadme(root: string, templateName: string, outputP
       }
     });
 
-    const out = path.isAbsolute(outputPath) ? outputPath : path.join(root, outputPath);
+    // Security: Prevent path traversal outside the target root directory
+    const resolvedRoot = path.resolve(root);
+    const out = path.resolve(resolvedRoot, outputPath);
+    const relative = path.relative(resolvedRoot, out);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      throw new Error(`Access denied: Output path "${outputPath}" escapes the root directory`);
+    }
+
     await fs.writeFile(out, rendered, 'utf-8');
     console.log(`✅ README generated at ${outputPath}`);
   } catch (error) {
