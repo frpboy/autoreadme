@@ -16,33 +16,45 @@ export type ProjectInfo = {
 async function detectGitRepo(root: string): Promise<string | undefined> {
   try {
     const gitConfigPath = path.join(root, '.git', 'config');
-    if (await fs.pathExists(gitConfigPath)) {
-      const config = await fs.readFile(gitConfigPath, 'utf-8');
-      const match = config.match(/url\s*=\s*(.+)/);
-      if (match) {
-        let url = match[1].trim();
-        if (url.startsWith('git@github.com:')) {
-          url = url.replace('git@github.com:', 'https://github.com/');
-        }
-        url = url.replace(/\.git$/, '');
-        return url;
+    // Bolt Optimization: Read directly without pathExists stat to eliminate redundant I/O syscall
+    const config = await fs.readFile(gitConfigPath, 'utf-8');
+    const match = config.match(/url\s*=\s*(.+)/);
+    if (match) {
+      let url = match[1].trim();
+      if (url.startsWith('git@github.com:')) {
+        url = url.replace('git@github.com:', 'https://github.com/');
       }
+      url = url.replace(/\.git$/, '');
+      return url;
     }
-  } catch (error) {
-    console.warn('Could not detect git repository');
+  } catch (error: any) {
+    if (error?.code !== 'ENOENT') {
+      console.warn('Could not detect git repository');
+    }
   }
   return undefined;
 }
 
 export async function scanProject(root: string): Promise<ProjectInfo> {
   try {
-    const repository = await detectGitRepo(root);
+    // Bolt Optimization: Parallelize git repo detection with package.json check to minimize scanning latency
+    const gitPromise = detectGitRepo(root);
 
     const pkgPath = path.join(root, 'package.json');
-    if (await fs.pathExists(pkgPath)) {
-      const pkg = await fs.readJSON(pkgPath);
+    let pkg: any = null;
+    try {
+      // Bolt Optimization: Attempt readJSON directly to eliminate redundant fs.pathExists stat check
+      pkg = await fs.readJSON(pkgPath);
+    } catch (error: any) {
+      if (error?.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+
+    if (pkg) {
       const scripts = pkg.scripts ? Object.keys(pkg.scripts) : [];
       const usageScript = pkg.scripts?.dev ? 'dev' : pkg.scripts?.start ? 'start' : scripts[0];
+      const repository = await gitPromise;
 
       return {
         projectName: pkg.name || path.basename(root),
@@ -58,8 +70,18 @@ export async function scanProject(root: string): Promise<ProjectInfo> {
     }
 
     const reqPath = path.join(root, 'requirements.txt');
-    if (await fs.pathExists(reqPath)) {
-      const req = await fs.readFile(reqPath, 'utf-8');
+    let req: string | null = null;
+    try {
+      req = await fs.readFile(reqPath, 'utf-8');
+    } catch (error: any) {
+      if (error?.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+
+    const repository = await gitPromise;
+
+    if (req !== null) {
       const deps = req.split('\n').map(s => s.trim()).filter(Boolean);
       return {
         projectName: path.basename(root),
