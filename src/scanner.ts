@@ -5,7 +5,7 @@ export type ProjectInfo = {
   projectName: string;
   description?: string;
   license?: string;
-  type: 'node'|'python'|'default';
+  type: 'node' | 'python' | 'default';
   usageExample?: string;
   dependencies?: string[];
   author?: string;
@@ -36,13 +36,16 @@ async function detectGitRepo(root: string): Promise<string | undefined> {
 
 export async function scanProject(root: string): Promise<ProjectInfo> {
   try {
-    const repository = await detectGitRepo(root);
+    // Performance optimization: Run Git repo detection concurrently with package inspection
+    // instead of waiting for Git I/O before inspecting package manifests.
+    const repoPromise = detectGitRepo(root);
 
     const pkgPath = path.join(root, 'package.json');
     if (await fs.pathExists(pkgPath)) {
       const pkg = await fs.readJSON(pkgPath);
       const scripts = pkg.scripts ? Object.keys(pkg.scripts) : [];
       const usageScript = pkg.scripts?.dev ? 'dev' : pkg.scripts?.start ? 'start' : scripts[0];
+      const repository = await repoPromise;
 
       return {
         projectName: pkg.name || path.basename(root),
@@ -61,6 +64,7 @@ export async function scanProject(root: string): Promise<ProjectInfo> {
     if (await fs.pathExists(reqPath)) {
       const req = await fs.readFile(reqPath, 'utf-8');
       const deps = req.split('\n').map(s => s.trim()).filter(Boolean);
+      const repository = await repoPromise;
       return {
         projectName: path.basename(root),
         description: '',
@@ -72,6 +76,7 @@ export async function scanProject(root: string): Promise<ProjectInfo> {
       };
     }
 
+    const repository = await repoPromise;
     return {
       projectName: path.basename(root),
       description: '',
