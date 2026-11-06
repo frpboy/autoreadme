@@ -24,7 +24,7 @@
   "dependencies": {
     "commander": "^12.1.0",
     "fs-extra": "^11.4.1",
-    "globby": "^14.0.1",
+    "globby": "^16.2.4",
     "handlebars": "^4.7.10"
   },
   "devDependencies": {
