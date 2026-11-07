@@ -2,7 +2,7 @@
 
 Auto-generate README.md from your project structure
 
-![build](https://img.shields.io/badge/build-passing-brightgreen) ![license](https://img.shields.io/badge/license-MIT-blue)
+![license](https://img.shields.io/badge/license-MIT-blue)
 
 [Repository](https://github.com/frpboy/autoreadme)
 
