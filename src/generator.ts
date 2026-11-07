@@ -28,7 +28,7 @@ async function getCompiledTemplate(templateName: string): Promise<HandlebarsTemp
     const templatePath = path.resolve(templatesDir, `${templateName}.hbs`);
     const relTemplate = path.relative(templatesDir, templatePath);
     if (relTemplate.startsWith('..') || path.isAbsolute(relTemplate)) {
-      throw new Error(`Access denied: template path traversal detected`);
+      throw new Error('Access denied: template path traversal detected');
     }
 
     let tplStr: string;
@@ -59,8 +59,9 @@ export async function generateReadme(root: string, templateName: string, outputP
 
     const rendered = tpl({
       ...info,
+      // A build badge is deliberately omitted until a project-specific CI
+      // result can be verified. Never imply that an unrelated or absent build passed.
       badges: {
-        build: '![build](https://img.shields.io/badge/build-passing-brightgreen)',
         license: `![license](https://img.shields.io/badge/license-${encodeURIComponent(info.license || 'MIT')}-blue)`
       }
     });

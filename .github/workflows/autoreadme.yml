@@ -2,10 +2,29 @@ name: AutoReadMe
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 permissions:
   contents: read
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
   generate:
+    if: github.event_name == 'push'
+    needs: validate
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -15,7 +34,7 @@ jobs:
           persist-credentials: true
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - run: npm ci
       - run: npm run build
       - run: node dist/index.js generate
