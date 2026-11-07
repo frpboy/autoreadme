@@ -57,8 +57,22 @@ export async function generateReadme(root: string, templateName: string, outputP
     const templateToUse = templateName === 'default' ? info.type : templateName;
     const tpl = await getCompiledTemplate(templateToUse);
 
+    // Security: Validate repository URL scheme to prevent javascript: / vbscript: / data: URI injection
+    let safeRepo: string | undefined;
+    if (info.repository) {
+      try {
+        const parsed = new URL(info.repository);
+        if (['https:', 'http:', 'git+https:', 'ssh:', 'git:'].includes(parsed.protocol)) {
+          safeRepo = info.repository;
+        }
+      } catch {
+        // Malformed or invalid URI - do not render unvalidated links
+      }
+    }
+
     const rendered = tpl({
       ...info,
+      repository: safeRepo,
       // A build badge is deliberately omitted until a project-specific CI
       // result can be verified. Never imply that an unrelated or absent build passed.
       badges: {

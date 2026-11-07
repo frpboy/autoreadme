@@ -49,3 +49,17 @@ test('generates into a temporary project without touching tracked examples', asy
     assert.ok(!readme.includes('build-passing'));
   });
 });
+
+test('filters out dangerous repository URL schemes (e.g., javascript:, data:)', async () => {
+  await withProject(async (root) => {
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      name: 'xss-fixture',
+      repository: { url: 'javascript:alert(1)' }
+    }));
+    await execFileAsync(process.execPath, [cli, 'generate'], { cwd: root });
+    const readme = await readFile(join(root, 'README.md'), 'utf8');
+
+    assert.ok(!readme.includes('javascript:'));
+    assert.ok(!readme.includes('[Repository]'));
+  });
+});
