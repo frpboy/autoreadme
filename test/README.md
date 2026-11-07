@@ -1,24 +1,22 @@
 # Test Suite
 
-This directory contains example projects used to test AutoReadMe functionality.
+The automated regression suite uses temporary project directories so test runs never overwrite the checked-in example READMEs.
 
-## Test Projects
+## Coverage
 
-1. **example-node**: A sample Node.js project with dependencies and scripts
-2. **example-python**: A sample Python project with requirements.txt
+- Default, Node.js, and Python project detection and template rendering.
+- Optional and malformed package metadata.
+- Usage scripts, dependencies, repository metadata, and license badges.
+- Fallback to the default template for an unknown template.
+- Output-path and template-path traversal protection.
+- Verification that generated output never claims an unverified build is passing.
 
-## Running Tests
-
-To test the tool against these examples:
+## Run
 
 ```bash
-cd test/example-node
-node ../../dist/index.js generate
-cat README.md
-
-cd ../example-python
-node ../../dist/index.js generate
-cat README.md
+npm test
 ```
 
-The generated README files should accurately reflect each project's structure and dependencies.
+The command builds the CLI and runs all files matching `test/*.test.mjs` with Node's built-in test runner.
+
+`npm run test:local` remains a manual generation smoke test. It writes a README into the current working directory and is not a regression test suite.

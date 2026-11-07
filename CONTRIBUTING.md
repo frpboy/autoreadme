@@ -4,19 +4,19 @@ Thank you for your interest in contributing to AutoReadMe! This document provide
 
 ## Getting Started
 
-1. Fork the repository on GitHub
-2. Clone your fork locally:
+1. Fork the repository on GitHub.
+2. Clone your fork:
    ```bash
    git clone https://github.com/YOUR-USERNAME/autoreadme.git
    cd autoreadme
    ```
 3. Install dependencies:
    ```bash
-   npm install
+   npm ci
    ```
-4. Build the project:
+4. Build and run the regression suite:
    ```bash
-   npm run build
+   npm test
    ```
 
 ## Development Workflow
@@ -29,132 +29,70 @@ autoreadme/
 │   ├── index.ts           # CLI entry point
 │   ├── generator.ts       # README generation logic
 │   ├── scanner.ts         # Project scanning and detection
-│   └── templates/         # Handlebars templates
-│       ├── default.hbs    # Generic project template
-│       ├── node.hbs       # Node.js project template
-│       └── python.hbs     # Python project template
-├── test/                  # Test examples
-└── dist/                  # Compiled output
+│   └── templates/         # default, Node.js, and Python templates
+├── test/
+│   ├── generator.test.mjs # deterministic CLI regression tests
+│   ├── security.test.mjs  # path traversal and safety tests
+│   └── example-*          # human-readable sample projects
+└── dist/                  # generated build output (not committed)
 ```
 
 ### Making Changes
 
-1. Create a new branch for your feature or bugfix:
+1. Create a branch:
    ```bash
    git checkout -b feature/your-feature-name
    ```
-
-2. Make your changes in the `src/` directory
-
-3. Build and test your changes:
+2. Make source changes and add regression tests for the behavior.
+3. Run the complete test/build gate:
    ```bash
-   npm run build
+   npm test
+   ```
+4. Use the generation smoke command only when you intentionally want to generate a README in the current directory:
+   ```bash
    npm run test:local
    ```
 
-4. Test with example projects:
-   ```bash
-   cd test/example-node
-   node ../../dist/index.js generate
-   ```
+## Code Style
 
-### Code Style
+- Use TypeScript for source files.
+- Follow the existing code style and conventions.
+- Use meaningful variable and function names.
+- Keep functions small and focused.
 
-- Use TypeScript for all source files
-- Follow the existing code style and conventions
-- Use meaningful variable and function names
-- Add comments for complex logic
-- Keep functions small and focused
+## Adding New Templates
 
-### Adding New Templates
+1. Create a template file in `src/templates/`.
+2. Add project detection to `src/scanner.ts`.
+3. Update `ProjectInfo` if necessary.
+4. Add a temporary-fixture regression test covering the new project type.
+5. Verify the generated output and documentation.
 
-To add support for a new project type:
+## Template Guidelines
 
-1. Create a new template file in `src/templates/`:
-   ```bash
-   touch src/templates/rust.hbs
-   ```
-
-2. Update `src/scanner.ts` to detect the new project type:
-   ```typescript
-   // Add detection logic for Cargo.toml, etc.
-   const cargoPath = path.join(root, 'Cargo.toml');
-   if (await fs.pathExists(cargoPath)) {
-     // Parse and return project info
-   }
-   ```
-
-3. Update the `ProjectInfo` type if needed
-
-4. Create a test example in `test/`
-
-5. Test thoroughly before submitting
-
-### Template Guidelines
-
-When creating templates:
-- Use triple braces `{{{variable}}}` for code/command content to prevent HTML escaping
-- Use double braces `{{variable}}` for text content
-- Include meaningful sections: Installation, Usage, Dependencies, License
-- Keep templates clean and well-organized
-- Test with various project configurations
+- Use triple braces `{{{variable}}}` for intentionally raw code/command content.
+- Use double braces `{{variable}}` for ordinary text.
+- Test missing optional metadata as well as populated metadata.
 
 ## Submitting Changes
 
-1. Commit your changes with clear, descriptive messages:
-   ```bash
-   git commit -m "feat: add Rust project support"
-   ```
-
-2. Push to your fork:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-3. Open a Pull Request on GitHub with:
-   - Clear description of changes
-   - Reference to any related issues
-   - Screenshots/examples if applicable
+1. Commit with a clear, descriptive message.
+2. Push your branch.
+3. Open a pull request with a summary, test evidence, and related issue links.
 
 ## Testing
 
-Before submitting a PR:
+`npm test` builds the production CLI and runs deterministic regression/security tests under Node's test runner. Tests use temporary directories and must not modify the checked-in sample projects or README.
 
-1. Ensure the project builds without errors:
-   ```bash
-   npm run build
-   ```
-
-2. Test with multiple project types:
-   ```bash
-   npm run test:local
-   ```
-
-3. Verify templates render correctly:
-   - Check for proper encoding
-   - Ensure all sections display as expected
-   - Test with projects that have missing optional fields
+`npm run test:local` is a generation smoke test, not a regression test suite. It writes a README in the current working directory.
 
 ## Reporting Issues
 
-When reporting bugs or suggesting features:
-
-1. Check existing issues first
-2. Provide a clear description
-3. Include reproduction steps for bugs
-4. Share example projects or configurations if relevant
-5. Specify your environment (Node version, OS, etc.)
+Before opening an issue, check for duplicates. Include reproduction steps, expected and actual behavior, environment details, and relevant sample input.
 
 ## Code of Conduct
 
-- Be respectful and inclusive
-- Welcome newcomers
-- Accept constructive criticism
-- Focus on what's best for the project
-
-## Questions?
-
-Feel free to open an issue for questions or discussions about contributing.
+Be respectful and inclusive. Focus on constructive feedback and what is best for the project.
 
 ## License
 

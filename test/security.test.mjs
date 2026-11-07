@@ -1,23 +1,51 @@
-import assert from 'node:assert';
-import path from 'node:path';
+import assert from 'node:assert/strict';
+import test from 'node:test';
 import { execFile } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
-const cli = path.resolve('dist/index.js');
-const tmp = path.resolve('test/example-node');
+const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const cli = resolve(projectRoot, 'dist/index.js');
 
-// 1. Template path traversal rejected
-await assert.rejects(
-  execFileAsync('node', [cli, 'generate', '-t', '../../package', '-o', 'README.md'], { cwd: tmp })
-);
+async function withProject(callback) {
+  const root = await mkdtemp(join(tmpdir(), 'autoreadme-security-'));
+  try {
+    await callback(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
 
-// 2. Output path traversal escaping root rejected
-await assert.rejects(
-  execFileAsync('node', [cli, 'generate', '-o', '../../escaped.md'], { cwd: tmp })
-);
+test('rejects template path traversal', async () => {
+  await withProject(async (root) => {
+    await assert.rejects(
+      execFileAsync(process.execPath, [cli, 'generate', '--template', '../../package'], { cwd: root })
+    );
+    await assert.rejects(readFile(join(root, 'README.md'), 'utf8'));
+  });
+});
 
-// 3. Normal generation succeeds
-const res = await execFileAsync('node', [cli, 'generate', '-o', 'README.md'], { cwd: tmp });
-assert(res.stdout.includes('README generated at README.md'));
-console.log('✅ Security tests passed');
+test('rejects output paths that escape the target project', async () => {
+  await withProject(async (root) => {
+    await assert.rejects(
+      execFileAsync(process.execPath, [cli, 'generate', '--out', '../../escaped.md'], { cwd: root })
+    );
+    await assert.rejects(readFile(join(root, 'README.md'), 'utf8'));
+  });
+});
+
+test('generates into a temporary project without touching tracked examples', async () => {
+  await withProject(async (root) => {
+    await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'temporary-security-fixture' }));
+    const result = await execFileAsync(process.execPath, [cli, 'generate', '--out', 'README.md'], { cwd: root });
+    const readme = await readFile(join(root, 'README.md'), 'utf8');
+
+    assert.ok(result.stdout.includes('README generated at README.md'));
+    assert.ok(readme.includes('# temporary-security-fixture'));
+    assert.ok(!readme.includes('build-passing'));
+  });
+});
