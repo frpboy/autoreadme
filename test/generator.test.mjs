@@ -36,6 +36,14 @@ test('detects an unclassified project and renders the default template', async (
   });
 });
 
+test('outputs current version when invoked with -v or --version', async () => {
+  const versionLong = await execFileAsync(process.execPath, [cli, '--version']);
+  assert.equal(versionLong.stdout.trim(), '0.1.0');
+
+  const versionShort = await execFileAsync(process.execPath, [cli, '-v']);
+  assert.equal(versionShort.stdout.trim(), '0.1.0');
+});
+
 test('detects Node projects and renders metadata, scripts, dependencies, and the Node template', async () => {
   await withProject(async (root) => {
     await writeFile(join(root, 'package.json'), JSON.stringify({
