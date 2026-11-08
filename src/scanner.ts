@@ -13,6 +13,21 @@ export type ProjectInfo = {
   scripts?: string[];
 };
 
+// Security: Validate repository URL to prevent XSS / malicious schemes (e.g. javascript:, data:) in markdown links
+function sanitizeRepoUrl(url?: unknown): string | undefined {
+  if (typeof url !== 'string') return undefined;
+  const trimmed = url.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      return trimmed;
+    }
+  } catch {
+    // Invalid URL format
+  }
+  return undefined;
+}
+
 async function detectGitRepo(root: string): Promise<string | undefined> {
   try {
     const gitConfigPath = path.join(root, '.git', 'config');
@@ -25,7 +40,7 @@ async function detectGitRepo(root: string): Promise<string | undefined> {
         url = url.replace('git@github.com:', 'https://github.com/');
       }
       url = url.replace(/\.git$/, '');
-      return url;
+      return sanitizeRepoUrl(url);
     }
   } catch (error: any) {
     if (error?.code !== 'ENOENT') {
@@ -55,6 +70,8 @@ export async function scanProject(root: string): Promise<ProjectInfo> {
       const scripts = pkg.scripts ? Object.keys(pkg.scripts) : [];
       const usageScript = pkg.scripts?.dev ? 'dev' : pkg.scripts?.start ? 'start' : scripts[0];
       const repository = await gitPromise;
+      const rawPkgRepo = typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url;
+      const repoUrl = sanitizeRepoUrl(rawPkgRepo) || repository;
 
       return {
         projectName: pkg.name || path.basename(root),
@@ -64,7 +81,7 @@ export async function scanProject(root: string): Promise<ProjectInfo> {
         usageExample: usageScript ? `npm install && npm run ${usageScript}` : 'npm install && npm start',
         dependencies: Object.keys(pkg.dependencies || {}),
         author: pkg.author,
-        repository: pkg.repository?.url || repository,
+        repository: repoUrl,
         scripts: scripts
       };
     }
