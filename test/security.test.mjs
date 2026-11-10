@@ -49,3 +49,38 @@ test('generates into a temporary project without touching tracked examples', asy
     assert.ok(!readme.includes('build-passing'));
   });
 });
+
+test('sanitizes credentials from repository URLs', async () => {
+  await withProject(async (root) => {
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({
+        name: 'secret-repo-fixture',
+        repository: 'https://oauth2:ghp_secrettoken123456@github.com/org/repo.git'
+      })
+    );
+    await execFileAsync(process.execPath, [cli, 'generate'], { cwd: root });
+    const readme = await readFile(join(root, 'README.md'), 'utf8');
+
+    assert.ok(!readme.includes('ghp_secrettoken123456'));
+    assert.ok(!readme.includes('oauth2:'));
+    assert.ok(readme.includes('[Repository](https://github.com/org/repo.git)'));
+  });
+});
+
+test('rejects dangerous URI schemes in repository field', async () => {
+  await withProject(async (root) => {
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({
+        name: 'xss-repo-fixture',
+        repository: 'javascript:alert(1)'
+      })
+    );
+    await execFileAsync(process.execPath, [cli, 'generate'], { cwd: root });
+    const readme = await readFile(join(root, 'README.md'), 'utf8');
+
+    assert.ok(!readme.includes('javascript:'));
+    assert.ok(!readme.includes('[Repository]('));
+  });
+});
