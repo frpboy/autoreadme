@@ -13,6 +13,29 @@ export type ProjectInfo = {
   scripts?: string[];
 };
 
+// Security: Sanitize repository URLs to prevent credential leakage (tokens/passwords in URLs)
+// and prevent dangerous URI schemes (e.g., javascript:, data:) from being rendered in markdown.
+function sanitizeRepositoryUrl(rawUrl: unknown): string | undefined {
+  if (typeof rawUrl !== 'string') return undefined;
+  let url = rawUrl.trim();
+  if (url.startsWith('git@github.com:')) {
+    url = url.replace('git@github.com:', 'https://github.com/');
+    url = url.replace(/\.git$/, '');
+  }
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return undefined;
+    }
+    // Strip user credentials (e.g. personal access tokens) from repository links
+    parsed.username = '';
+    parsed.password = '';
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 async function detectGitRepo(root: string): Promise<string | undefined> {
   try {
     const gitConfigPath = path.join(root, '.git', 'config');
@@ -20,12 +43,7 @@ async function detectGitRepo(root: string): Promise<string | undefined> {
     const config = await fs.readFile(gitConfigPath, 'utf-8');
     const match = config.match(/url\s*=\s*(.+)/);
     if (match) {
-      let url = match[1].trim();
-      if (url.startsWith('git@github.com:')) {
-        url = url.replace('git@github.com:', 'https://github.com/');
-      }
-      url = url.replace(/\.git$/, '');
-      return url;
+      return sanitizeRepositoryUrl(match[1]);
     }
   } catch (error: any) {
     if (error?.code !== 'ENOENT') {
@@ -64,7 +82,7 @@ export async function scanProject(root: string): Promise<ProjectInfo> {
         usageExample: usageScript ? `npm install && npm run ${usageScript}` : 'npm install && npm start',
         dependencies: Object.keys(pkg.dependencies || {}),
         author: pkg.author,
-        repository: pkg.repository?.url || repository,
+        repository: sanitizeRepositoryUrl(pkg.repository?.url || pkg.repository) || repository,
         scripts: scripts
       };
     }
