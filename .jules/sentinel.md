@@ -2,3 +2,8 @@
 **Vulnerability:** The CLI accepted unvalidated template names (`-t`) and output paths (`-o`), allowing arbitrary file reads and arbitrary file writes outside the project directory.
 **Learning:** CLI utilities accepting file identifiers or destination paths must strictly validate character sets and verify directory boundaries using `path.relative` against the target root directory.
 **Prevention:** Restrict template names to `/^[a-zA-Z0-9_-]+$/` and ensure resolved output paths do not escape the target project root.
+
+## 2026-11-08 - Repository URL Protocol Injection in README Generator
+**Vulnerability:** Repository URLs read from `.git/config` or `package.json` were rendered into Markdown link targets using unescaped Handlebars expressions without protocol validation, allowing malicious schemes (`javascript:`, `data:`).
+**Learning:** External project metadata rendered directly into clickable links must be strictly parsed with `new URL()` to enforce safe network protocols (`http:` and `https:`).
+**Prevention:** Validate and sanitize repository URLs through `sanitizeRepoUrl` to allow only `http:` and `https:` protocols before attaching them to project info.

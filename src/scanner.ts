@@ -13,6 +13,22 @@ export type ProjectInfo = {
   scripts?: string[];
 };
 
+// Security: Restrict repository links to safe protocols (http/https) to prevent
+// script execution or malicious link schemes (e.g. javascript:, data:) in generated markdown
+export function sanitizeRepoUrl(rawUrl?: unknown): string | undefined {
+  if (typeof rawUrl !== 'string') return undefined;
+  const trimmed = rawUrl.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return trimmed;
+    }
+  } catch {
+    // Malformed URL or non-standard protocol
+  }
+  return undefined;
+}
+
 async function detectGitRepo(root: string): Promise<string | undefined> {
   try {
     const gitConfigPath = path.join(root, '.git', 'config');
@@ -25,7 +41,7 @@ async function detectGitRepo(root: string): Promise<string | undefined> {
         url = url.replace('git@github.com:', 'https://github.com/');
       }
       url = url.replace(/\.git$/, '');
-      return url;
+      return sanitizeRepoUrl(url);
     }
   } catch (error: any) {
     if (error?.code !== 'ENOENT') {
@@ -54,7 +70,7 @@ export async function scanProject(root: string): Promise<ProjectInfo> {
     if (pkg) {
       const scripts = pkg.scripts ? Object.keys(pkg.scripts) : [];
       const usageScript = pkg.scripts?.dev ? 'dev' : pkg.scripts?.start ? 'start' : scripts[0];
-      const repository = await gitPromise;
+      const repository = sanitizeRepoUrl(typeof pkg.repository === 'string' ? pkg.repository : pkg.repository?.url) || await gitPromise;
 
       return {
         projectName: pkg.name || path.basename(root),
@@ -64,7 +80,7 @@ export async function scanProject(root: string): Promise<ProjectInfo> {
         usageExample: usageScript ? `npm install && npm run ${usageScript}` : 'npm install && npm start',
         dependencies: Object.keys(pkg.dependencies || {}),
         author: pkg.author,
-        repository: pkg.repository?.url || repository,
+        repository,
         scripts: scripts
       };
     }
