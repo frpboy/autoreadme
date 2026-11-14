@@ -31,14 +31,18 @@ async function getCompiledTemplate(templateName: string): Promise<HandlebarsTemp
       throw new Error('Access denied: template path traversal detected');
     }
 
+    // Bolt Optimization: Read directly without redundant fs.pathExists stat check to eliminate extra I/O syscalls.
+    // Falls back to default.hbs if the requested template does not exist (ENOENT).
     let tplStr: string;
-    if (await fs.pathExists(templatePath)) {
+    try {
       tplStr = await fs.readFile(templatePath, 'utf-8');
-    } else {
+    } catch (err: any) {
+      if (err?.code !== 'ENOENT') throw err;
       const defaultPath = path.join(templatesDir, 'default.hbs');
-      if (await fs.pathExists(defaultPath)) {
+      try {
         tplStr = await fs.readFile(defaultPath, 'utf-8');
-      } else {
+      } catch (defaultErr: any) {
+        if (defaultErr?.code !== 'ENOENT') throw defaultErr;
         throw new Error(`Template not found: ${templateName}`);
       }
     }
