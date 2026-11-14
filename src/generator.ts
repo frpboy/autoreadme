@@ -74,6 +74,16 @@ export async function generateReadme(root: string, templateName: string, outputP
       throw new Error(`Access denied: Output path "${outputPath}" escapes the root directory`);
     }
 
+    // Security: Prevent symlink traversal arbitrary file overwrite
+    const realRoot = await fs.realpath(resolvedRoot);
+    if (await fs.pathExists(out)) {
+      const realOut = await fs.realpath(out);
+      const relRealOut = path.relative(realRoot, realOut);
+      if (relRealOut.startsWith('..') || path.isAbsolute(relRealOut)) {
+        throw new Error(`Access denied: Output symlink points outside the root directory`);
+      }
+    }
+
     await fs.writeFile(out, rendered, 'utf-8');
     console.log(`✅ README generated at ${outputPath}`);
   } catch (error) {
