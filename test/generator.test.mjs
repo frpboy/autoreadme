@@ -61,6 +61,19 @@ test('detects Node projects and renders metadata, scripts, dependencies, and the
   });
 });
 
+test('handles UTF-8 BOM-prefixed package metadata', async () => {
+  await withProject(async (root) => {
+    const packageJson = JSON.stringify({ name: 'bom-node-fixture' }, null, 2);
+    await writeFile(join(root, 'package.json'), `\uFEFF${packageJson}`, 'utf8');
+
+    await generate(root);
+    const readme = await readFile(join(root, 'README.md'), 'utf8');
+
+    assert.ok(readme.includes('# bom-node-fixture'));
+    assert.ok(!readme.includes('undefined'));
+  });
+});
+
 test('detects Python projects and renders requirements in the Python template', async () => {
   await withProject(async (root) => {
     await writeFile(join(root, 'requirements.txt'), 'requests==2.32.0\npydantic>=2\n');
