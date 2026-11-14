@@ -32,14 +32,20 @@ async function getCompiledTemplate(templateName: string): Promise<HandlebarsTemp
     }
 
     let tplStr: string;
-    if (await fs.pathExists(templatePath)) {
+    // Bolt Optimization: Directly attempt reading the template file instead of
+    // performing redundant fs.pathExists stat calls. Falls back to default.hbs on ENOENT.
+    try {
       tplStr = await fs.readFile(templatePath, 'utf-8');
-    } else {
-      const defaultPath = path.join(templatesDir, 'default.hbs');
-      if (await fs.pathExists(defaultPath)) {
-        tplStr = await fs.readFile(defaultPath, 'utf-8');
+    } catch (readErr: any) {
+      if (readErr?.code === 'ENOENT') {
+        const defaultPath = path.join(templatesDir, 'default.hbs');
+        try {
+          tplStr = await fs.readFile(defaultPath, 'utf-8');
+        } catch (defaultErr: any) {
+          throw new Error(`Template not found: ${templateName}`);
+        }
       } else {
-        throw new Error(`Template not found: ${templateName}`);
+        throw readErr;
       }
     }
 
