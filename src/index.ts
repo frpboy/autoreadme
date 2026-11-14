@@ -5,7 +5,8 @@ import { generateReadme } from './generator.js';
 const program = new Command();
 program
   .name('autoreadme')
-  .description('Auto-generate or update README.md based on your project');
+  .description('Auto-generate or update README.md based on your project')
+  .version('0.1.0', '-v, --version', 'Output the current version');
 
 program
   .command('generate')
