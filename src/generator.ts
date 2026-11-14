@@ -32,14 +32,22 @@ async function getCompiledTemplate(templateName: string): Promise<HandlebarsTemp
     }
 
     let tplStr: string;
-    if (await fs.pathExists(templatePath)) {
+    // Bolt Optimization: Read directly to eliminate redundant fs.pathExists stat syscalls
+    try {
       tplStr = await fs.readFile(templatePath, 'utf-8');
-    } else {
-      const defaultPath = path.join(templatesDir, 'default.hbs');
-      if (await fs.pathExists(defaultPath)) {
-        tplStr = await fs.readFile(defaultPath, 'utf-8');
+    } catch (error: any) {
+      if (error?.code === 'ENOENT') {
+        const defaultPath = path.join(templatesDir, 'default.hbs');
+        try {
+          tplStr = await fs.readFile(defaultPath, 'utf-8');
+        } catch (defaultError: any) {
+          if (defaultError?.code === 'ENOENT') {
+            throw new Error(`Template not found: ${templateName}`);
+          }
+          throw defaultError;
+        }
       } else {
-        throw new Error(`Template not found: ${templateName}`);
+        throw error;
       }
     }
 
@@ -53,9 +61,12 @@ async function getCompiledTemplate(templateName: string): Promise<HandlebarsTemp
 
 export async function generateReadme(root: string, templateName: string, outputPath = 'README.md'): Promise<void> {
   try {
-    const info = await scanProject(root);
-    const templateToUse = templateName === 'default' ? info.type : templateName;
-    const tpl = await getCompiledTemplate(templateToUse);
+    // Bolt Optimization: When templateName is explicit, parallelize project scanning and template compilation
+    const infoPromise = scanProject(root);
+    const tplPromise = templateName !== 'default' ? getCompiledTemplate(templateName) : null;
+
+    const info = await infoPromise;
+    const tpl = tplPromise ? await tplPromise : await getCompiledTemplate(info.type);
 
     const rendered = tpl({
       ...info,
