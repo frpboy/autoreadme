@@ -46,7 +46,8 @@ export async function scanProject(root: string): Promise<ProjectInfo> {
     try {
       // Bolt Optimization: Read file and parse JSON directly without fs-extra
       const pkgContent = await fs.readFile(pkgPath, 'utf-8');
-      pkg = JSON.parse(pkgContent);
+      // Preserve fs-extra readJSON compatibility with UTF-8 BOM-prefixed package files.
+      pkg = JSON.parse(pkgContent.replace(/^\uFEFF/, ''));
     } catch (error: any) {
       if (error?.code !== 'ENOENT') {
         throw error;
